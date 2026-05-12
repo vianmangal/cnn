@@ -1,0 +1,4 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python.defaultInterpreterPath": "/Users/vian/Desktop/cnn/.venv/bin/python"
+}

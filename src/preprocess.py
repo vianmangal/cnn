@@ -7,56 +7,77 @@ import os #folder nav
 import cv2 #img access and readin etc 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 # Dataset path
 TRAIN_DIR = "data/fer2013/train"
 
+if not os.path.isdir(TRAIN_DIR):
+    raise FileNotFoundError(f"Training directory not found: {TRAIN_DIR}")
+
 # Emotion labels
-emotion_labels = os.listdir(TRAIN_DIR)
+emotion_labels = sorted(
+    name
+    for name in os.listdir(TRAIN_DIR)
+    if not name.startswith(".") and os.path.isdir(os.path.join(TRAIN_DIR, name))
+)
+
+if not emotion_labels:
+    raise ValueError(f"No emotion folders found in: {TRAIN_DIR}")
 
 print("Detected Emotion Classes:")
 print(emotion_labels)
+# Lists to store data
+X = []
+y = []
 
-# Function to load image
-def load_image(image_path):
-
-    # Read image in grayscale
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    # Resize image to 48x48
-    image = cv2.resize(image, (48, 48))
-
-    # Normalize pixel values
-    image = image / 255.0
-
-    return image
-
-
-# Display sample images
-plt.figure(figsize=(12, 8))
-
-index = 1
-
+# Loop through emotion folders
 for emotion in emotion_labels:
 
     emotion_path = os.path.join(TRAIN_DIR, emotion)
 
-    # Get first image from folder
-    image_name = os.listdir(emotion_path)[0]
+    # Get all image names
+    images = os.listdir(emotion_path)
 
-    image_path = os.path.join(emotion_path, image_name)
+    print(f"Loading {emotion} images...")
 
-    # Load image
-    image = load_image(image_path)
+    for image_name in images:
 
-    # Plot image
-    plt.subplot(3, 3, index)
-    plt.imshow(image, cmap='gray')
+        image_path = os.path.join(emotion_path, image_name)
 
-    plt.title(emotion)
-    plt.axis('off')
+        # Read image
+        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-    index += 1
+        # Resize
+        image = cv2.resize(image, (48, 48))
 
-plt.tight_layout()
-plt.show()
+        # Normalize
+        image = image / 255.0
+
+        # Add image to dataset
+        X.append(image)
+
+        # Add label
+        y.append(emotion)
+
+# Convert to NumPy arrays
+X = np.array(X)
+y = np.array(y)
+
+# Add channel dimension
+X = X.reshape(-1, 48, 48, 1)  
+
+print("\nDataset Loaded Successfully")
+print("X shape:", X.shape)
+print("y shape:", y.shape)
+
+# Train-test split
+X_train, X_val, y_train, y_val = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+print("\nTraining Data Shape:", X_train.shape)
+print("Validation Data Shape:", X_val.shape)
