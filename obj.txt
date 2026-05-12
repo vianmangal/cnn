@@ -36,3 +36,15 @@ Happy
 Sad
 Surprise
 Neutral
+
+some points to consider
+1) fix size 
+2) grayscale img
+
+Frameworks Used:
+PyTorch - avoid 
+Python
+TensorFlow + Keras
+OpenCV
+NumPy
+Matplotlib
