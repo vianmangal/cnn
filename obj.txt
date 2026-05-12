@@ -1,0 +1,38 @@
+objective - CNN - Convolutional Neural Network
+
+image processing so you can understand how that works. 
+image classifications for human emotions. 
+
+dataset from kaggle.
+(https://www.kaggle.com/datasets/nelgiriyewithana/emotions)
+
+
+my understanding so far:
+
+1) input image has a lot of pixels, to recognize the pattern easily instead of looking at each pixel we group them.
+2) this group of pixels is passed through a filter (convolution layer) and a grid/matrix/stack-like structure is made for writing the 0s and 1s.
+3) relu function is passed so only positive integers remain in the matrix. pooling is applied (majorly 2 types - avg/mean or max).
+4) another filter is passed to "flatten" it as much as possible.
+5) the final output is passed through a classic cnn with its weights and bias and the calculation shows the output in the final format of 0 or 1.
+
+Process:
+Image
+   ↓
+Face Detection
+   ↓
+Face Cropping
+   ↓
+Preprocessing
+   ↓
+CNN Emotion Classifier
+   ↓
+Emotion Label
+
+Emotions to be dectected:
+Angry
+Disgust
+Fear
+Happy
+Sad
+Surprise
+Neutral
