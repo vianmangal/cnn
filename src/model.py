@@ -5,7 +5,7 @@ from tensorflow.keras.optimizers import Adam
 
 def build_cnn_model(
     input_shape=(48, 48, 1),
-    num_classes=7,
+    num_classes=5,
     learning_rate=1e-3
 ):
     model = Sequential()

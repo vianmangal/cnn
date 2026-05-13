@@ -109,7 +109,6 @@ angry -> 0
 - [x] Analyze emotion confusion
 
 ## Common Failure Cases
-- Fear vs Surprise
 - Neutral vs Sad
 - Low-light images
 - Extreme angles
@@ -141,19 +140,6 @@ angry -> 0
 - [x] Crop face regions
 - [x] Run CNN inference
 - [x] Overlay predictions on video feed
-
----
-
-# Phase 8 — Improvements
-
-## Possible Enhancements
-- Data augmentation
-- Batch normalization
-- Transfer learning
-- Better architectures
-- Hyperparameter tuning
-- Vision Transformers
-- Real-time optimization
 
 ---
 

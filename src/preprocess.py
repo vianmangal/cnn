@@ -12,19 +12,26 @@ from sklearn.preprocessing import LabelEncoder
 
 # Dataset path
 TRAIN_DIR = "data/fer2013/train"
+INCLUDED_CLASSES = ["angry", "fear", "happy", "neutral", "sad"]
 
 if not os.path.isdir(TRAIN_DIR):
     raise FileNotFoundError(f"Training directory not found: {TRAIN_DIR}")
 
 # Emotion labels
-emotion_labels = sorted(
+available_labels = sorted(
     name
     for name in os.listdir(TRAIN_DIR)
     if not name.startswith(".") and os.path.isdir(os.path.join(TRAIN_DIR, name))
 )
 
-if not emotion_labels:
+if not available_labels:
     raise ValueError(f"No emotion folders found in: {TRAIN_DIR}")
+
+missing_labels = [label for label in INCLUDED_CLASSES if label not in available_labels]
+if missing_labels:
+    raise ValueError(f"Missing emotion folders: {missing_labels}")
+
+emotion_labels = INCLUDED_CLASSES
 
 print("Detected Emotion Classes:")
 print(emotion_labels)

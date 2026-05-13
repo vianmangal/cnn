@@ -7,7 +7,7 @@ from preprocess import X_train, X_val, y_train, y_val, label_mapping
 
 
 def main():
-    model = build_cnn_model()
+    model = build_cnn_model(num_classes=len(label_mapping))
 
     history = model.fit(
         X_train,
