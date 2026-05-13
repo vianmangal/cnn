@@ -103,10 +103,10 @@ angry -> 0
 - Understand model weaknesses
 
 ## Tasks
-- [ ] Generate predictions
-- [ ] Plot confusion matrix
-- [ ] Visualize incorrect predictions
-- [ ] Analyze emotion confusion
+- [x] Generate predictions
+- [x] Plot confusion matrix
+- [x] Visualize incorrect predictions
+- [x] Analyze emotion confusion
 
 ## Common Failure Cases
 - Fear vs Surprise
@@ -122,11 +122,11 @@ angry -> 0
 - Predict emotion from new image
 
 ## Tasks
-- [ ] Create predict.py
-- [ ] Load trained model
-- [ ] Preprocess new image
-- [ ] Generate prediction
-- [ ] Display confidence scores
+- [x] Create predict.py
+- [x] Load trained model
+- [x] Preprocess new image
+- [x] Generate prediction
+- [x] Display confidence scores
 
 ---
 
@@ -136,11 +136,11 @@ angry -> 0
 - Run live emotion detection
 
 ## Tasks
-- [ ] Access webcam using OpenCV
-- [ ] Detect faces
-- [ ] Crop face regions
-- [ ] Run CNN inference
-- [ ] Overlay predictions on video feed
+- [x] Access webcam using OpenCV
+- [x] Detect faces
+- [x] Crop face regions
+- [x] Run CNN inference
+- [x] Overlay predictions on video feed
 
 ---
 
@@ -165,9 +165,13 @@ angry -> 0
 - Tensor creation
 - Train-validation split
 - Label encoding
+- Model training
+- Model evaluation
+- Inference pipeline
+- Real-time webcam detection
 
 ## Next Step
-Build and test the first CNN architecture in model.py
+Start Phase 8: iterate on improvements
 
 ---
 
