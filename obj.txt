@@ -15,6 +15,11 @@ my understanding so far:
 3) relu function is passed so only positive integers remain in the matrix. pooling is applied (majorly 2 types - avg/mean or max).
 4) another filter is passed to "flatten" it as much as possible.
 5) the final output is passed through a classic cnn with its weights and bias and the calculation shows the output in the final format of 0 or 1.
+6) softmax for converting to probabilities of the image is shifted by certain pixels etc
+
+droupouts- reduces neurons-  so the model does not memorize training images
+
+
 
 Process:
 Image

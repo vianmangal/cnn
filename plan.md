@@ -63,9 +63,9 @@ Build a Convolutional Neural Network (CNN) capable of classifying human emotions
 - Convert emotion labels into numerical format
 
 ## Tasks
-- [ ] Encode labels using LabelEncoder
-- [ ] Convert labels to integers
-- [ ] Verify label mappings
+- [x] Encode labels using LabelEncoder
+- [x] Convert labels to integers
+- [x] Verify label mappings
 
 ## Example
 happy -> 3
@@ -81,9 +81,9 @@ angry -> 0
 - Monitor learning performance
 
 ## Tasks
-- [ ] Create train.py
-- [ ] Import preprocessing pipeline
-- [ ] Import CNN model
+- [x] Create train.py
+- [x] Import preprocessing pipeline
+- [x] Import CNN model
 - [ ] Train model
 - [ ] Save trained model
 - [ ] Track training accuracy
@@ -164,6 +164,7 @@ angry -> 0
 - Image preprocessing
 - Tensor creation
 - Train-validation split
+- Label encoding
 
 ## Next Step
 Build and test the first CNN architecture in model.py

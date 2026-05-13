@@ -8,6 +8,7 @@ import cv2 #img access and readin etc
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 # Dataset path
 TRAIN_DIR = "data/fer2013/train"
@@ -63,6 +64,15 @@ for emotion in emotion_labels:
 # Convert to NumPy arrays
 X = np.array(X)
 y = np.array(y)
+
+# Encode labels to integers
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+label_mapping = dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))
+
+print("\nLabel Mapping:")
+for label, idx in label_mapping.items():
+    print(f"{label} -> {idx}")
 
 # Add channel dimension
 X = X.reshape(-1, 48, 48, 1)  
