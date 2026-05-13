@@ -84,10 +84,10 @@ angry -> 0
 - [x] Create train.py
 - [x] Import preprocessing pipeline
 - [x] Import CNN model
-- [ ] Train model
-- [ ] Save trained model
-- [ ] Track training accuracy
-- [ ] Track validation accuracy
+- [x] Train model
+- [x] Save trained model
+- [x] Track training accuracy
+- [x] Track validation accuracy
 
 ## Metrics
 - Accuracy
