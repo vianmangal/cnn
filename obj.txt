@@ -5,6 +5,7 @@ image classifications for human emotions.
 
 dataset from kaggle.
 (https://www.kaggle.com/datasets/nelgiriyewithana/emotions)
+(https://www.kaggle.com/datasets/msambare/fer2013)
 
 
 my understanding so far:
