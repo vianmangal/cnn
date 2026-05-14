@@ -1,6 +1,6 @@
 # cnn
 
-CNN-based emotion recognition using the FER2013 dataset.
+CNN-based emotion recognition.
 
 Detected emotions: angry, fear, happy, neutral, sad.
 
@@ -46,3 +46,4 @@ Run real-time webcam detection (press q to quit):
 # Datasets
 1) https://www.kaggle.com/datasets/nelgiriyewithana/emotions
 2) https://www.kaggle.com/datasets/msambare/fer2013
+3) any custom image and webcam.
