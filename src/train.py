@@ -3,10 +3,12 @@ import os
 from datetime import datetime
 
 from model import build_cnn_model
-from preprocess import X_train, X_val, y_train, y_val, label_mapping
+from preprocess import load_data_splits
 
 
 def main():
+    X_train, X_val, y_train, y_val, label_mapping = load_data_splits()
+
     model = build_cnn_model(num_classes=len(label_mapping))
 
     history = model.fit(

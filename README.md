@@ -4,6 +4,8 @@ CNN-based emotion recognition using the FER2013 dataset.
 
 Detected emotions: angry, fear, happy, neutral, sad.
 
+2 ways: Image or Webcam.
+
 # Setup
 
 1) Create a virtual environment:

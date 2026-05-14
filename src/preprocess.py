@@ -1,100 +1,155 @@
-##loads and displays the img
-##loads csv -> does the conversions/resizing etc
+import os
 
-##learn parsing,reshaping, normalization
-
-import os #folder nav
-import cv2 #img access and readin etc 
+import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-# Dataset path
-TRAIN_DIR = "data/fer2013/train"
-INCLUDED_CLASSES = ["angry", "fear", "happy", "neutral", "sad"]
+DEFAULT_TRAIN_DIR = "data/fer2013/train"
+DEFAULT_INCLUDED_CLASSES = ["angry", "fear", "happy", "neutral", "sad"]
+DEFAULT_IMAGE_SIZE = (48, 48)
 
-if not os.path.isdir(TRAIN_DIR):
-    raise FileNotFoundError(f"Training directory not found: {TRAIN_DIR}")
 
-# Emotion labels
-available_labels = sorted(
-    name
-    for name in os.listdir(TRAIN_DIR)
-    if not name.startswith(".") and os.path.isdir(os.path.join(TRAIN_DIR, name))
-)
+def _get_available_labels(train_dir):
+    if not os.path.isdir(train_dir):
+        raise FileNotFoundError(f"Training directory not found: {train_dir}")
 
-if not available_labels:
-    raise ValueError(f"No emotion folders found in: {TRAIN_DIR}")
+    available_labels = sorted(
+        name
+        for name in os.listdir(train_dir)
+        if not name.startswith(".") and os.path.isdir(os.path.join(train_dir, name))
+    )
 
-missing_labels = [label for label in INCLUDED_CLASSES if label not in available_labels]
-if missing_labels:
-    raise ValueError(f"Missing emotion folders: {missing_labels}")
+    if not available_labels:
+        raise ValueError(f"No emotion folders found in: {train_dir}")
 
-emotion_labels = INCLUDED_CLASSES
+    return available_labels
 
-print("Detected Emotion Classes:")
-print(emotion_labels)
-# Lists to store data
-X = []
-y = []
 
-# Loop through emotion folders
-for emotion in emotion_labels:
+def _resolve_labels(available_labels, included_classes):
+    if included_classes:
+        missing_labels = [label for label in included_classes if label not in available_labels]
+        if missing_labels:
+            raise ValueError(f"Missing emotion folders: {missing_labels}")
+        return included_classes
 
-    emotion_path = os.path.join(TRAIN_DIR, emotion)
+    return available_labels
 
-    # Get all image names
-    images = os.listdir(emotion_path)
 
-    print(f"Loading {emotion} images...")
+def load_dataset(
+    train_dir=DEFAULT_TRAIN_DIR,
+    included_classes=DEFAULT_INCLUDED_CLASSES,
+    image_size=DEFAULT_IMAGE_SIZE,
+    verbose=True
+):
+    """Load images from disk and return tensors plus label mapping."""
+    available_labels = _get_available_labels(train_dir)
+    emotion_labels = _resolve_labels(available_labels, included_classes)
 
-    for image_name in images:
+    if verbose:
+        print("Detected Emotion Classes:")
+        print(emotion_labels)
 
-        image_path = os.path.join(emotion_path, image_name)
+    X = []
+    y = []
+    skipped = 0
 
-        # Read image
-        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    width, height = image_size
 
-        # Resize
-        image = cv2.resize(image, (48, 48))
+    for emotion in emotion_labels:
+        emotion_path = os.path.join(train_dir, emotion)
+        images = [
+            name
+            for name in os.listdir(emotion_path)
+            if not name.startswith(".")
+        ]
 
-        # Normalize
-        image = image / 255.0
+        if verbose:
+            print(f"Loading {emotion} images...")
 
-        # Add image to dataset
-        X.append(image)
+        for image_name in images:
+            image_path = os.path.join(emotion_path, image_name)
+            if not os.path.isfile(image_path):
+                continue
 
-        # Add label
-        y.append(emotion)
+            image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+            if image is None:
+                skipped += 1
+                continue
 
-# Convert to NumPy arrays
-X = np.array(X)
-y = np.array(y)
+            resized = cv2.resize(image, (width, height), interpolation=cv2.INTER_AREA)
+            normalized = resized.astype("float32") / 255.0
+            X.append(normalized)
+            y.append(emotion)
 
-# Encode labels to integers
-label_encoder = LabelEncoder()
-y = label_encoder.fit_transform(y)
-label_mapping = dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))
+    if not X:
+        raise ValueError("No images were loaded from the dataset.")
 
-print("\nLabel Mapping:")
-for label, idx in label_mapping.items():
-    print(f"{label} -> {idx}")
+    X = np.array(X, dtype="float32")
+    y = np.array(y)
 
-# Add channel dimension
-X = X.reshape(-1, 48, 48, 1)  
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+    label_mapping = dict(
+        zip(
+            label_encoder.classes_,
+            label_encoder.transform(label_encoder.classes_)
+        )
+    )
 
-print("\nDataset Loaded Successfully")
-print("X shape:", X.shape)
-print("y shape:", y.shape)
+    X = X.reshape(-1, height, width, 1)
 
-# Train-test split
-X_train, X_val, y_train, y_val = train_test_split(
-    X,
-    y,
+    if verbose:
+        print("\nLabel Mapping:")
+        for label, idx in label_mapping.items():
+            print(f"{label} -> {idx}")
+
+        print("\nDataset Loaded Successfully")
+        print("X shape:", X.shape)
+        print("y shape:", y_encoded.shape)
+        if skipped:
+            print(f"Skipped {skipped} unreadable images.")
+
+    return X, y_encoded, label_mapping
+
+
+def split_dataset(X, y, test_size=0.2, random_state=42):
+    return train_test_split(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_state
+    )
+
+
+def load_data_splits(
+    train_dir=DEFAULT_TRAIN_DIR,
+    included_classes=DEFAULT_INCLUDED_CLASSES,
+    image_size=DEFAULT_IMAGE_SIZE,
     test_size=0.2,
-    random_state=42
-)
+    random_state=42,
+    verbose=True
+):
+    """Load the dataset and return train/validation splits plus label mapping."""
+    X, y, label_mapping = load_dataset(
+        train_dir=train_dir,
+        included_classes=included_classes,
+        image_size=image_size,
+        verbose=verbose
+    )
+    X_train, X_val, y_train, y_val = split_dataset(
+        X,
+        y,
+        test_size=test_size,
+        random_state=random_state
+    )
 
-print("\nTraining Data Shape:", X_train.shape)
-print("Validation Data Shape:", X_val.shape)
+    if verbose:
+        print("\nTraining Data Shape:", X_train.shape)
+        print("Validation Data Shape:", X_val.shape)
+
+    return X_train, X_val, y_train, y_val, label_mapping
+
+
+if __name__ == "__main__":
+    load_data_splits()

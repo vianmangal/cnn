@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from tensorflow.keras.models import load_model
 
-from preprocess import X_val, y_val, label_mapping
+from preprocess import load_data_splits
 
 
 def find_latest_model(models_dir):
@@ -103,6 +103,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    _, X_val, _, y_val, label_mapping = load_data_splits(verbose=False)
 
     model_path = args.model_path or find_latest_model(args.models_dir)
     base_name = os.path.splitext(os.path.basename(model_path))[0]
