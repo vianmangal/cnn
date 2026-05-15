@@ -37,7 +37,7 @@ Run real-time webcam detection (press q to quit):
 # versions
 
 1) tensorflow==2.21.0
-2) opencv-python==4.13.0.92
+2) opencv-python==4.13.0.92 - to read image into memory
 3) matplotlib==3.10.9
 4) pandas==3.0.3
 5) numpy==2.4.4
