@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from datetime import datetime
 
@@ -9,7 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from tensorflow.keras.models import load_model
 
-from preprocess import load_data_splits
+from preprocess import load_dataset
 
 
 def find_latest_model(models_dir):
@@ -31,6 +32,14 @@ def find_latest_model(models_dir):
     )
 
     return os.path.join(models_dir, model_files[0])
+
+
+def load_label_mapping(labels_path):
+    if not labels_path or not os.path.isfile(labels_path):
+        raise FileNotFoundError(f"Labels file not found: {labels_path}")
+    with open(labels_path, "r", encoding="utf-8") as file_handle:
+        mapping = json.load(file_handle)
+    return {label: int(idx) for label, idx in mapping.items()}
 
 
 def build_class_names(mapping):
@@ -87,7 +96,7 @@ def top_confusions(cm, class_names, top_k=5):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate CNN model on validation split")
+    parser = argparse.ArgumentParser(description="Evaluate CNN model on test split")
     parser.add_argument(
         "--model-path",
         default=None,
@@ -98,24 +107,51 @@ def parse_args():
         default="models",
         help="Directory to search for model files if --model-path is not set."
     )
+    parser.add_argument(
+        "--labels-path",
+        default=None,
+        help="Path to a labels JSON file. Defaults to the matching labels file in models/."
+    )
+    parser.add_argument(
+        "--test-dir",
+        default="data/fer2013/test",
+        help="Directory containing test images by class."
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
-    _, X_val, _, y_val, label_mapping = load_data_splits(verbose=False)
-
     model_path = args.model_path or find_latest_model(args.models_dir)
     base_name = os.path.splitext(os.path.basename(model_path))[0]
 
+    labels_path = args.labels_path
+    if not labels_path:
+        candidate = os.path.join(args.models_dir, f"{base_name}_labels.json")
+        if not os.path.isfile(candidate) and base_name.endswith("_best"):
+            candidate = os.path.join(
+                args.models_dir,
+                f"{base_name[:-5]}_labels.json"
+            )
+        labels_path = candidate
+
+    label_mapping = load_label_mapping(labels_path)
+    class_names = build_class_names(label_mapping)
+
+    X_test, y_test, _ = load_dataset(
+        train_dir=args.test_dir,
+        included_classes=list(label_mapping.keys()),
+        label_mapping=label_mapping,
+        verbose=False
+    )
+
     model = load_model(model_path)
 
-    y_pred_probs = model.predict(X_val, batch_size=64)
+    y_pred_probs = model.predict(X_test, batch_size=64)
     y_pred = np.argmax(y_pred_probs, axis=1)
 
-    class_names = build_class_names(label_mapping)
-    cm = confusion_matrix(y_val, y_pred, labels=list(range(len(class_names))))
+    cm = confusion_matrix(y_test, y_pred, labels=list(range(len(class_names))))
 
     os.makedirs(args.models_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -126,14 +162,14 @@ def main():
 
     save_confusion_matrix(cm, class_names, cm_path)
     saved_misclassified = save_misclassified_grid(
-        X_val,
-        y_val,
+        X_test,
+        y_test,
         y_pred,
         class_names,
         misclassified_path
     )
 
-    report = classification_report(y_val, y_pred, target_names=class_names, digits=4)
+    report = classification_report(y_test, y_pred, target_names=class_names, digits=4)
     with open(report_path, "w", encoding="utf-8") as file_handle:
         file_handle.write(report)
 

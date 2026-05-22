@@ -36,11 +36,31 @@ def _resolve_labels(available_labels, included_classes):
     return available_labels
 
 
+def _encode_labels(y, label_mapping=None):
+    if label_mapping:
+        missing_labels = [label for label in np.unique(y) if label not in label_mapping]
+        if missing_labels:
+            raise ValueError(f"Label mapping missing classes: {missing_labels}")
+        y_encoded = np.array([label_mapping[label] for label in y], dtype="int64")
+        return y_encoded, label_mapping
+
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+    label_mapping = dict(
+        zip(
+            label_encoder.classes_,
+            label_encoder.transform(label_encoder.classes_)
+        )
+    )
+    return y_encoded, label_mapping
+
+
 def load_dataset(
     train_dir=DEFAULT_TRAIN_DIR,
     included_classes=DEFAULT_INCLUDED_CLASSES,
     image_size=DEFAULT_IMAGE_SIZE,
-    verbose=True
+    verbose=True,
+    label_mapping=None
 ):
     """Load images from disk and return tensors plus label mapping."""
     available_labels = _get_available_labels(train_dir)
@@ -88,14 +108,7 @@ def load_dataset(
     X = np.array(X, dtype="float32")
     y = np.array(y)
 
-    label_encoder = LabelEncoder()
-    y_encoded = label_encoder.fit_transform(y)
-    label_mapping = dict(
-        zip(
-            label_encoder.classes_,
-            label_encoder.transform(label_encoder.classes_)
-        )
-    )
+    y_encoded, label_mapping = _encode_labels(y, label_mapping)
 
     X = X.reshape(-1, height, width, 1)
 
@@ -113,12 +126,14 @@ def load_dataset(
     return X, y_encoded, label_mapping
 
 
-def split_dataset(X, y, test_size=0.2, random_state=42):
+def split_dataset(X, y, test_size=0.2, random_state=42, stratify=True):
+    stratify_labels = y if stratify else None
     return train_test_split(
         X,
         y,
         test_size=test_size,
-        random_state=random_state
+        random_state=random_state,
+        stratify=stratify_labels
     )
 
 
@@ -128,20 +143,24 @@ def load_data_splits(
     image_size=DEFAULT_IMAGE_SIZE,
     test_size=0.2,
     random_state=42,
-    verbose=True
+    verbose=True,
+    label_mapping=None,
+    stratify=True
 ):
     """Load the dataset and return train/validation splits plus label mapping."""
     X, y, label_mapping = load_dataset(
         train_dir=train_dir,
         included_classes=included_classes,
         image_size=image_size,
-        verbose=verbose
+        verbose=verbose,
+        label_mapping=label_mapping
     )
     X_train, X_val, y_train, y_val = split_dataset(
         X,
         y,
         test_size=test_size,
-        random_state=random_state
+        random_state=random_state,
+        stratify=stratify
     )
 
     if verbose:

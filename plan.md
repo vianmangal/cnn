@@ -161,6 +161,23 @@ Start Phase 8: iterate on improvements
 
 ---
 
+# Phase 8 — Improvement Iterations
+
+## Objectives
+- Improve generalization and reduce class bias
+- Push test accuracy toward 75%
+
+## Tasks
+- [x] Add data augmentation in the model
+- [x] Add BatchNorm + L2 + GlobalAveragePooling
+- [x] Use stratified train/validation split
+- [x] Use class weights for imbalance
+- [x] Add EarlyStopping, ReduceLROnPlateau, and checkpoints
+- [ ] Train and evaluate on the test set
+- [ ] Update stats and confusion summary
+
+---
+
 # Expected Beginner Results
 
 ## Accuracy Targets
@@ -193,3 +210,10 @@ Build a real-time AI-powered emotion recognition system capable of:
 - webcam emotion detection
 - real-time inference
 - facial expression analysis
+
+what is deep learning 
+what is machine learning 
+what is neural network
+what is application of neural network 
+how do nn function
+cnn,rnn,ann, etc whats this?
