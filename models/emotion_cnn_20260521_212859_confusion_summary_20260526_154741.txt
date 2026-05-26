@@ -1,0 +1,6 @@
+Top confusions (true -> predicted):
+fear -> angry: 258
+sad -> neutral: 244
+sad -> angry: 243
+fear -> sad: 228
+neutral -> sad: 218
