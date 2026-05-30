@@ -1,6 +1,45 @@
 .venv/
-data/
+.env
+.env.*
 .DS_Store
+.idea/
+.vscode/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyd
+*.pyo
+*.log
+*.swp
+*~
+
+# Python build/test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Node/Vite
+node_modules/
+dist/
+frontend/dist/
+.vite/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Project data/artifacts
+data/
 models/
