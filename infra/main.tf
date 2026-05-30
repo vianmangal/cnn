@@ -15,7 +15,7 @@ provider "aws" {
 
 variable "aws_region" {
   type    = string
-  default = "eu-west-1"
+  default = "ap-south-1"
 }
 
 variable "project_name" {
@@ -393,7 +393,7 @@ resource "aws_db_instance" "main" {
   publicly_accessible     = false
   multi_az                = false
   skip_final_snapshot     = true
-  backup_retention_period = 7
+  backup_retention_period = 0
 
   tags = {
     Name = "${var.project_name}-db"
