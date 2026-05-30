@@ -4,11 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_path: str = "emotion_model.keras"
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/emotion"
-    secret_key: str = "change-me"
-    access_token_expire_minutes: int = 60
-    cors_allow_origins: List[str] = ["*"]
+    DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/emotiondb"
+    SECRET_KEY: str = "change-me"
+    MODEL_PATH: str = "emotion_model.keras"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    CORS_ALLOW_ORIGINS: List[str] = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",

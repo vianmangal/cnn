@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,12 +14,12 @@ class PredictionResponse(BaseModel):
 
 
 class PredictionRecord(BaseModel):
-    id: int
+    id: UUID
+    image_filename: Optional[str] = None
     emotion: str
     confidence: float
     all_scores: Dict[str, float]
-    face_detected: bool
-    model_version: str
+    source: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
