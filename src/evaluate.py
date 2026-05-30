@@ -1,49 +1,16 @@
 import argparse
-import json
 import os
 from datetime import datetime
 
-import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 from tensorflow.keras.models import load_model
 
 from preprocess import load_dataset
-
-
-def find_latest_model(models_dir):
-    if not os.path.isdir(models_dir):
-        raise FileNotFoundError(f"Models directory not found: {models_dir}")
-
-    model_files = [
-        file_name
-        for file_name in os.listdir(models_dir)
-        if file_name.endswith(".keras")
-    ]
-
-    if not model_files:
-        raise FileNotFoundError(f"No .keras models found in: {models_dir}")
-
-    model_files.sort(
-        key=lambda file_name: os.path.getmtime(os.path.join(models_dir, file_name)),
-        reverse=True
-    )
-
-    return os.path.join(models_dir, model_files[0])
-
-
-def load_label_mapping(labels_path):
-    if not labels_path or not os.path.isfile(labels_path):
-        raise FileNotFoundError(f"Labels file not found: {labels_path}")
-    with open(labels_path, "r", encoding="utf-8") as file_handle:
-        mapping = json.load(file_handle)
-    return {label: int(idx) for label, idx in mapping.items()}
-
-
-def build_class_names(mapping):
-    return [label for label, idx in sorted(mapping.items(), key=lambda item: item[1])]
+from utils import build_class_names, find_latest_file, load_label_mapping
 
 
 def save_confusion_matrix(cm, class_names, output_path):
@@ -123,7 +90,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    model_path = args.model_path or find_latest_model(args.models_dir)
+    model_path = args.model_path or find_latest_file(args.models_dir, ".keras")
     base_name = os.path.splitext(os.path.basename(model_path))[0]
 
     labels_path = args.labels_path

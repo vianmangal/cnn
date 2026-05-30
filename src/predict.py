@@ -1,42 +1,10 @@
 import argparse
-import json
-import os
 
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
-
-def find_latest_file(directory, suffix):
-    if not os.path.isdir(directory):
-        raise FileNotFoundError(f"Directory not found: {directory}")
-
-    files = [
-        file_name
-        for file_name in os.listdir(directory)
-        if file_name.endswith(suffix)
-    ]
-
-    if not files:
-        raise FileNotFoundError(f"No {suffix} files found in: {directory}")
-
-    files.sort(
-        key=lambda file_name: os.path.getmtime(os.path.join(directory, file_name)),
-        reverse=True
-    )
-
-    return os.path.join(directory, files[0])
-
-
-def load_label_mapping(labels_path):
-    if not labels_path:
-        return None
-
-    with open(labels_path, "r", encoding="utf-8") as file_handle:
-        raw_mapping = json.load(file_handle)
-
-    index_to_label = {int(idx): label for label, idx in raw_mapping.items()}
-    return [label for _, label in sorted(index_to_label.items())]
+from utils import load_class_names, resolve_model_and_labels
 
 
 def preprocess_image(image_path):
@@ -80,21 +48,13 @@ def parse_args():
 def main():
     args = parse_args()
 
-    model_path = args.model_path or find_latest_file(args.models_dir, ".keras")
-    base_name = os.path.splitext(os.path.basename(model_path))[0]
+    model_path, labels_path = resolve_model_and_labels(
+        args.models_dir,
+        model_path=args.model_path,
+        labels_path=args.labels_path
+    )
 
-    labels_path = args.labels_path
-    if not labels_path:
-        default_labels = os.path.join(args.models_dir, f"{base_name}_labels.json")
-        if os.path.exists(default_labels):
-            labels_path = default_labels
-        else:
-            try:
-                labels_path = find_latest_file(args.models_dir, "_labels.json")
-            except FileNotFoundError:
-                labels_path = None
-
-    class_names = load_label_mapping(labels_path)
+    class_names = load_class_names(labels_path)
 
     model = load_model(model_path)
     input_tensor = preprocess_image(args.image_path)

@@ -25,11 +25,9 @@ Train the model:
 Evaluate the latest model:
 	.venv/bin/python src/evaluate.py
 
-Predict a single image (relative path example):
+Predict a single image (relative path):
 	.venv/bin/python src/predict.py --image-path data/custom/my_face.jpg
 
-Predict a single image (absolute path example):
-	/Users/vian/Desktop/cnn/.venv/bin/python src/predict.py --image-path /Users/vian/Desktop/cnn/data/custom/my_face.jpg
 
 Run real-time webcam detection (press q to quit):
 	.venv/bin/python src/webcam.py
