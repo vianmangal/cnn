@@ -36,6 +36,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <div>HOST: vian1.tech</div>
           <div>STACK: S3 + CloudFront + ALB</div>
         </div>
+        
     </aside>
   );
 }
