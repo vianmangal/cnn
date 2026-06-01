@@ -4,7 +4,6 @@ import { BrowserRouter } from "react-router-dom";
 
 import App from "./App.jsx";
 import "./index.css";
-import { AuthProvider } from "./context/AuthContext.jsx";
 
 if (!document.documentElement.classList.contains("dark")) {
   document.documentElement.classList.add("dark");
@@ -13,9 +12,8 @@ if (!document.documentElement.classList.contains("dark")) {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <App />
     </BrowserRouter>
   </React.StrictMode>
 );
+
