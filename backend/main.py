@@ -3,11 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.config import settings
-from backend.database import init_db
-from backend.models import cnn_model
-from backend.routers import auth, history, predict
-
+from .config import settings
+from .database import init_db
+from .models import cnn_model
+from .routers import auth, history, predict
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
