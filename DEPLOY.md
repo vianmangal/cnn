@@ -12,8 +12,8 @@
 cd infra
 terraform init
 terraform apply \
-  -var="aws_region=eu-west-1" \
-  -var="acm_certificate_arn=arn:aws:acm:eu-west-1:ACCOUNT_ID:certificate/CERT_ID" \
+  -var="aws_region=ap-south-1" \
+  -var="acm_certificate_arn=arn:aws:acm:ap-south-1:ACCOUNT_ID:certificate/CERT_ID" \
   -var="db_username=emotionuser" \
   -var="db_password=strongpassword"
 ```
@@ -30,7 +30,7 @@ terraform output rds_endpoint
 ## Step 2: Upload the model to S3
 
 ```bash
-aws s3 cp emotion_model.keras s3://emotionlens-models/emotion_model.keras --region eu-west-1
+aws s3 cp emotion_model.keras s3://emotionlens-models/emotion_model.keras --region ap-south-1
 ```
 
 ## Step 3: Populate Secrets Manager values
@@ -39,19 +39,19 @@ aws s3 cp emotion_model.keras s3://emotionlens-models/emotion_model.keras --regi
 aws secretsmanager put-secret-value \
   --secret-id emotionlens-database-url \
   --secret-string "postgresql+asyncpg://emotionuser:strongpassword@<rds_endpoint>:5432/emotiondb" \
-  --region eu-west-1
+  --region ap-south-1
 
 aws secretsmanager put-secret-value \
   --secret-id emotionlens-secret-key \
   --secret-string "replace-with-a-strong-secret" \
-  --region eu-west-1
+  --region ap-south-1
 ```
 
 ## Step 4: Build and push the initial backend image
 
 ```bash
 ECR_REPO=$(terraform -chdir=infra output -raw ecr_repository_url)
-aws ecr get-login-password --region eu-west-1 | \
+aws ecr get-login-password --region ap-south-1 | \
   docker login --username AWS --password-stdin "$ECR_REPO"
 
 docker build -f backend/Dockerfile -t "$ECR_REPO:latest" .
@@ -63,11 +63,12 @@ docker push "$ECR_REPO:latest"
 Set these repository secrets:
 
 - `AWS_ROLE_ARN` (GitHub OIDC role for deployments)
-- `VITE_API_URL` (https://<alb_dns_name>)
 - `FRONTEND_BUCKET` (emotionlens-frontend)
 - `CLOUDFRONT_DISTRIBUTION_ID` (from CloudFront console)
 - `ECS_SUBNETS` (comma-separated private subnet IDs)
 - `ECS_SECURITY_GROUPS` (comma-separated ECS security group IDs)
+
+`VITE_API_URL` is optional. The recommended production setup is to proxy `/predict`, `/auth`, `/history`, and `/health` through CloudFront on the same site domain.
 
 Helper commands to fetch subnet and SG IDs:
 
