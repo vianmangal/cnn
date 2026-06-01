@@ -11,7 +11,7 @@ from .routers import auth, history, predict
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cnn_model.load_model_once()
-    await init_db()
+   # await init_db()
     yield
 
 
