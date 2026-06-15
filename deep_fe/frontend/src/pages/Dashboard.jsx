@@ -136,14 +136,6 @@ export default function Dashboard() {
               <h1 className="text-base font-bold tracking-[0.22em] text-white sm:text-xl sm:tracking-[0.25em]">
               EMOTIONLENS
               </h1>
-              <div className="hidden h-4 w-px bg-zinc-800 sm:block" />
-              <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-zinc-500 lg:inline-block">
-                AI-Powered Emotion Analytics Platform
-              </span>
-            </div>
-
-            <div className="w-full border border-zinc-800 bg-zinc-950/40 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-400 sm:w-auto sm:rounded-md">
-              {activeTab === "upload" ? "📂 FILE MODE" : "📸 CAMERA MODE"}
             </div>
           </div>
         </header>

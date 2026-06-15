@@ -59,7 +59,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
         <div className="border-t border-zinc-900 px-4 py-5 text-[9px] text-zinc-600">
           <div>HOST: vian1.tech</div>
-          <div>STACK: S3 + CloudFront + ALB</div>
         </div>
       </aside>
     </>
