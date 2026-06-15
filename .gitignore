@@ -37,9 +37,12 @@ frontend/dist/
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
+tfplan
 crash.log
 crash.*.log
 
 # Project data/artifacts
 data/
-
+models/
+.nv

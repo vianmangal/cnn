@@ -5,9 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/emotiondb"
-    SECRET_KEY: str = "change-me"
     MODEL_PATH: str = "emotion_model.keras"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     CORS_ALLOW_ORIGINS: List[str] = ["*"]
 
     model_config = SettingsConfigDict(
@@ -19,4 +17,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-ALGORITHM = "HS256"

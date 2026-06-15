@@ -11,18 +11,21 @@ color-scheme: dark;
 html,
 body,
 #root {
-width: 100%;
-min-height: 100%;
+  width: 100%;
+  min-height: 100%;
 }
 
 @layer base {
 
 * {
+  box-sizing: border-box;
   font-family: 'JetBrains Mono', monospace;
   }
 
 body {
 @apply bg-black text-white antialiased;
+min-height: 100vh;
+overflow-x: hidden;
 }
 
 button {
@@ -75,4 +78,3 @@ opacity: 1;
 .animate-scan {
   animation: scan 3s linear infinite;
 }
-

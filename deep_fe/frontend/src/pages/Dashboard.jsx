@@ -126,40 +126,38 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-black text-white font-mono overflow-hidden">
+    <div className="flex min-h-screen w-full flex-col bg-black text-white font-mono md:flex-row">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
-        {/* Compact SaaS Header */}
-        <header className="border-b border-zinc-900 px-8 py-4 flex items-center justify-between shrink-0 bg-black/50 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-[0.25em] text-white">
+      <div className="flex min-h-screen flex-1 flex-col bg-black">
+        <header className="border-b border-zinc-900 bg-black/50 px-4 py-4 backdrop-blur-md sm:px-6 md:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <h1 className="text-base font-bold tracking-[0.22em] text-white sm:text-xl sm:tracking-[0.25em]">
               EMOTIONLENS
-            </h1>
-            <div className="h-4 w-px bg-zinc-800" />
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold hidden md:inline-block">
-              AI-Powered Emotion Analytics Platform
-            </span>
-          </div>
+              </h1>
+              <div className="hidden h-4 w-px bg-zinc-800 sm:block" />
+              <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-zinc-500 lg:inline-block">
+                AI-Powered Emotion Analytics Platform
+              </span>
+            </div>
 
-          <div className="border border-zinc-800 px-3 py-1 rounded-md text-[10px] text-zinc-400 uppercase tracking-widest font-semibold bg-zinc-950/40">
-            {activeTab === "upload" ? "📂 FILE MODE" : "📸 CAMERA MODE"}
+            <div className="w-full border border-zinc-800 bg-zinc-950/40 px-3 py-1.5 text-center text-[10px] font-semibold uppercase tracking-widest text-zinc-400 sm:w-auto sm:rounded-md">
+              {activeTab === "upload" ? "📂 FILE MODE" : "📸 CAMERA MODE"}
+            </div>
           </div>
         </header>
 
-        {/* Scrollable Container */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-4xl mx-auto flex flex-col gap-8 pb-16">
-            
-            {/* Error Alert */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 md:px-8 md:py-8">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-10 sm:gap-8 sm:pb-16">
             {error && (
-              <div className="border border-red-950 bg-red-950/20 text-red-200 px-5 py-4 rounded-xl text-xs flex justify-between items-center transition-all duration-300">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 rounded-xl border border-red-950 bg-red-950/20 px-4 py-4 text-xs text-red-200 transition-all duration-300 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div className="flex items-start gap-2 sm:items-center">
                   <span className="text-red-400">⚠️</span>
                   <span>{error}</span>
                 </div>
-                <button 
-                  onClick={() => setError(null)} 
+                <button
+                  onClick={() => setError(null)}
                   className="text-red-400 hover:text-red-200 uppercase tracking-wider text-[10px] font-bold"
                 >
                   Dismiss
@@ -167,23 +165,20 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Core Card Section (Upload Zone / Live Webcam) */}
-            <div className="border border-zinc-900 bg-zinc-950/30 rounded-2xl p-6 transition-all duration-300">
+            <div className="rounded-2xl border border-zinc-900 bg-zinc-950/30 p-4 transition-all duration-300 sm:p-6">
               <div className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase mb-4">
                 {activeTab === "upload" ? "IMAGE ACQUISITION" : "LIVE CAMERA FEED"}
               </div>
 
               {activeTab === "upload" ? (
-                // Upload Tab View
                 <div>
                   {!preview ? (
-                    // Drag & Drop Area
                     <div
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
-                      className={`border border-dashed rounded-xl h-64 flex flex-col justify-center items-center cursor-pointer transition-all duration-200 relative overflow-hidden group ${
+                      className={`group relative flex h-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed px-6 text-center transition-all duration-200 sm:h-64 ${
                         isDragging
                           ? "border-white bg-zinc-900/40"
                           : "border-zinc-800 hover:border-zinc-500 hover:bg-zinc-950/50"
@@ -207,9 +202,8 @@ export default function Dashboard() {
                       />
                     </div>
                   ) : (
-                    // Upload Image Selected View
                     <div className="flex flex-col gap-4">
-                      <div className="relative aspect-video max-h-80 overflow-hidden rounded-xl border border-zinc-900 bg-black flex items-center justify-center">
+                      <div className="relative flex aspect-video max-h-80 items-center justify-center overflow-hidden rounded-xl border border-zinc-900 bg-black">
                         <CornerBrackets />
                         <img
                           src={preview}
@@ -223,8 +217,7 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      {/* Integrated Action Bar */}
-                      <div className="flex gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                         <button
                           onClick={handleClear}
                           disabled={loading}
@@ -235,7 +228,7 @@ export default function Dashboard() {
                         <button
                           onClick={handleAnalyze}
                           disabled={loading}
-                          className="flex-[2.5] py-3 bg-white hover:bg-zinc-200 text-black font-bold rounded-xl text-xs uppercase tracking-widest transition-all duration-200 shadow-[0_0_15px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 rounded-xl bg-white py-3 text-xs font-bold uppercase tracking-widest text-black shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all duration-200 hover:bg-zinc-200 disabled:opacity-50 sm:flex-[2.5]"
                         >
                           {loading ? (
                             <>
@@ -251,12 +244,10 @@ export default function Dashboard() {
                   )}
                 </div>
               ) : (
-                // Webcam Tab View
                 <div>
                   {!webcamCaptured ? (
-                    // Live View & Capture Action
                     <div className="flex flex-col gap-4">
-                      <div className="relative aspect-video max-h-80 overflow-hidden rounded-xl border border-zinc-900 bg-black flex items-center justify-center">
+                      <div className="relative flex aspect-video max-h-80 items-center justify-center overflow-hidden rounded-xl border border-zinc-900 bg-black">
                         <CornerBrackets />
                         <Webcam
                           audio={false}
@@ -272,15 +263,14 @@ export default function Dashboard() {
 
                       <button
                         onClick={handleCapture}
-                        className="w-full py-3.5 bg-white hover:bg-zinc-200 text-black font-bold rounded-xl text-xs uppercase tracking-widest transition-all duration-200 shadow-[0_0_15px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3.5 text-xs font-bold uppercase tracking-widest text-black shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all duration-200 hover:bg-zinc-200"
                       >
                         Capture Frame
                       </button>
                     </div>
                   ) : (
-                    // Photo Captured View
                     <div className="flex flex-col gap-4">
-                      <div className="relative aspect-video max-h-80 overflow-hidden rounded-xl border border-zinc-900 bg-black flex items-center justify-center">
+                      <div className="relative flex aspect-video max-h-80 items-center justify-center overflow-hidden rounded-xl border border-zinc-900 bg-black">
                         <CornerBrackets />
                         <img
                           src={preview}
@@ -294,8 +284,7 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      {/* Integrated Action Bar */}
-                      <div className="flex gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                         <button
                           onClick={handleClear}
                           disabled={loading}
@@ -306,7 +295,7 @@ export default function Dashboard() {
                         <button
                           onClick={handleAnalyze}
                           disabled={loading}
-                          className="flex-[2.5] py-3 bg-white hover:bg-zinc-200 text-black font-bold rounded-xl text-xs uppercase tracking-widest transition-all duration-200 shadow-[0_0_15px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 rounded-xl bg-white py-3 text-xs font-bold uppercase tracking-widest text-black shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all duration-200 hover:bg-zinc-200 disabled:opacity-50 sm:flex-[2.5]"
                         >
                           {loading ? (
                             <>
@@ -324,16 +313,13 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Results Output Section */}
             {result && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4 animate-fade">
-                
-                {/* Result Display Area */}
-                <div className="border border-zinc-900 bg-zinc-950/30 rounded-2xl p-6">
+              <div className="mt-2 grid grid-cols-1 gap-6 animate-fade lg:grid-cols-2 lg:gap-8">
+                <div className="rounded-2xl border border-zinc-900 bg-zinc-950/30 p-4 sm:p-6">
                   <div className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase mb-5">
                     ANALYSIS FRAME
                   </div>
-                  <div className="relative overflow-hidden rounded-xl border border-zinc-900 bg-black aspect-square flex items-center justify-center">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-zinc-900 bg-black">
                     <CornerBrackets />
                     <img
                       src={preview}
@@ -343,28 +329,25 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Classification Metrics */}
                 <div className="flex flex-col gap-6">
-                  
-                  {/* Dominant Emotion Header */}
-                  <div className="border border-zinc-900 bg-zinc-950/30 rounded-2xl p-6">
+                  <div className="rounded-2xl border border-zinc-900 bg-zinc-950/30 p-4 sm:p-6">
                     <div className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">
                       DOMINANT EXPRESSION
                     </div>
-                    <div className="flex items-baseline gap-3 mt-3">
-                      <h2 className="text-4xl font-extrabold uppercase tracking-wider text-white">
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <h2 className="text-3xl font-extrabold uppercase tracking-wide text-white sm:text-4xl sm:tracking-wider">
                         {result.emotion}
                       </h2>
-                      <span className="text-4xl select-none">
+                      <span className="select-none text-3xl sm:text-4xl">
                         {EMOJI_MAP[result.emotion] || "•"}
                       </span>
                     </div>
 
-                    <div className="text-xl font-medium text-zinc-400 mt-2">
+                    <div className="mt-2 text-lg font-medium text-zinc-400 sm:text-xl">
                       {(result.confidence * 100).toFixed(1)}% Confidence
                     </div>
 
-                    <div className="mt-4 flex gap-2 flex-wrap">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       <div className="border border-zinc-800 px-2.5 py-1 rounded text-[10px] font-semibold text-zinc-400 tracking-wider bg-zinc-900/30">
                         {result.face_detected ? "FACE DETECTED ✓" : "NO FACE DETECTED"}
                       </div>
@@ -374,8 +357,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Distribution Scores */}
-                  <div className="border border-zinc-900 bg-zinc-950/30 rounded-2xl p-6 flex-1">
+                  <div className="flex-1 rounded-2xl border border-zinc-900 bg-zinc-950/30 p-4 sm:p-6">
                     <div className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase mb-5">
                       PROBABILITY DISTRIBUTION
                     </div>
@@ -406,14 +388,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
-
           </div>
         </div>
       </div>
     </div>
   );
 }
-

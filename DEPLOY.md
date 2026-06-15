@@ -40,11 +40,6 @@ aws secretsmanager put-secret-value \
   --secret-id emotionlens-database-url \
   --secret-string "postgresql+asyncpg://emotionuser:strongpassword@<rds_endpoint>:5432/emotiondb" \
   --region ap-south-1
-
-aws secretsmanager put-secret-value \
-  --secret-id emotionlens-secret-key \
-  --secret-string "replace-with-a-strong-secret" \
-  --region ap-south-1
 ```
 
 ## Step 4: Build and push the initial backend image
@@ -68,7 +63,7 @@ Set these repository secrets:
 - `ECS_SUBNETS` (comma-separated private subnet IDs)
 - `ECS_SECURITY_GROUPS` (comma-separated ECS security group IDs)
 
-`VITE_API_URL` is optional. The recommended production setup is to proxy `/predict`, `/auth`, `/history`, and `/health` through CloudFront on the same site domain.
+`VITE_API_URL` is optional. The recommended production setup is to proxy `/predict` and `/health` through CloudFront on the same site domain.
 
 Helper commands to fetch subnet and SG IDs:
 

@@ -4,14 +4,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .database import init_db
 from .models import cnn_model
-from .routers import auth, history, predict
+from .routers import predict
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cnn_model.load_model_once()
-   # await init_db()
     yield
 
 
@@ -25,9 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
 app.include_router(predict.router)
-app.include_router(history.router)
 
 
 @app.get("/health")

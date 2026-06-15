@@ -45,3 +45,43 @@ Run real-time webcam detection (press q to quit):
 1) https://www.kaggle.com/datasets/nelgiriyewithana/emotions
 2) https://www.kaggle.com/datasets/msambare/fer2013
 3) any custom image and webcam.
+
+---
+
+# EmotionLens
+
+EmotionLens is a compact emotion-detection app with:
+
+- `backend/` for the FastAPI inference API
+- `deep_fe/frontend/` for the React + Vite UI
+- `infra/` for AWS deployment
+- `src/` for optional local model training and evaluation scripts
+
+## Local setup
+
+1. Create a virtual environment:
+   `python -m venv .venv`
+2. Activate it:
+   `source .venv/bin/activate`
+3. Install backend dependencies:
+   `pip install -r backend/requirements.txt`
+4. Install frontend dependencies:
+   `cd deep_fe/frontend && npm ci`
+
+## Local development
+
+- Backend:
+  `uvicorn backend.main:app --reload`
+- Frontend:
+  `cd deep_fe/frontend && npm run dev`
+
+## Optional model tooling
+
+- Train:
+  `.venv/bin/python src/train.py`
+- Evaluate:
+  `.venv/bin/python src/evaluate.py`
+- Predict a single image:
+  `.venv/bin/python src/predict.py --image-path data/custom/my_face.jpg`
+- Run webcam inference:
+  `.venv/bin/python src/webcam.py`
