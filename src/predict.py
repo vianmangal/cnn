@@ -1,9 +1,9 @@
 import argparse
 
 import cv2
-import numpy as np
 from tensorflow.keras.models import load_model
 
+from image_utils import build_model_input
 from utils import load_class_names, resolve_model_and_labels
 
 
@@ -12,10 +12,7 @@ def preprocess_image(image_path):
     if image is None:
         raise FileNotFoundError(f"Unable to read image: {image_path}")
 
-    resized = cv2.resize(image, (48, 48))
-    normalized = resized.astype("float32") / 255.0
-    input_tensor = normalized.reshape(1, 48, 48, 1)
-    return input_tensor
+    return build_model_input(image)
 
 
 def parse_args():

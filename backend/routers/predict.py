@@ -14,9 +14,6 @@ async def predict_emotion(
     image: UploadFile = File(...),
     session: AsyncSession = Depends(get_db),
 ):
-    if not image:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing image.")
-
     image_bytes = await image.read()
     if not image_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image payload.")

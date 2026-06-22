@@ -5,9 +5,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
+from image_utils import DEFAULT_IMAGE_SIZE, normalize_grayscale_image
+
 DEFAULT_TRAIN_DIR = "data/fer2013/train"
 DEFAULT_INCLUDED_CLASSES = ["angry", "fear", "happy", "neutral", "sad"]
-DEFAULT_IMAGE_SIZE = (48, 48)
 
 
 def _get_available_labels(train_dir):
@@ -97,9 +98,7 @@ def load_dataset(
                 skipped += 1
                 continue
 
-            resized = cv2.resize(image, (width, height), interpolation=cv2.INTER_AREA)
-            normalized = resized.astype("float32") / 255.0
-            X.append(normalized)
+            X.append(normalize_grayscale_image(image, image_size=image_size))
             y.append(emotion)
 
     if not X:

@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
+from image_utils import build_model_input
 from utils import load_class_names, resolve_model_and_labels
 
 
@@ -90,10 +91,7 @@ def main():
 
             for (x, y, w, h) in faces:
                 face = gray[y:y + h, x:x + w]
-                resized = cv2.resize(face, (48, 48))
-                normalized = resized.astype("float32") / 255.0
-                input_tensor = normalized.reshape(1, 48, 48, 1)
-
+                input_tensor = build_model_input(face)
                 probabilities = model.predict(input_tensor, verbose=0)[0]
                 pred_idx = int(np.argmax(probabilities))
                 confidence = float(probabilities[pred_idx])

@@ -34,12 +34,12 @@ variable "acm_certificate_arn" {
 
 variable "cloudfront_certificate_arn" {
   type    = string
-  default = "arn:aws:acm:us-east-1:440673338462:certificate/2a6956c0-a450-4868-8b1d-727b75338143"
+  default = "arn:aws:acm:us-east-1:440673338462:certificate/a391ff90-a657-4e02-bc75-ef7f0ce40fab"
 }
 
 variable "frontend_domain_names" {
   type    = list(string)
-  default = ["vian1.tech", "www.vian1.tech"]
+  default = ["cnn.vian1.tech"]
 }
 
 variable "db_name" {

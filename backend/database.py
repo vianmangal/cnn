@@ -17,10 +17,3 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
-
-
-async def init_db() -> None:
-    from backend.models import db_models  # noqa: F401
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
