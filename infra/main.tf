@@ -1,6 +1,12 @@
 terraform {
   required_version = ">= 1.5.0"
 
+  # Supply bucket, key, region, and locking configuration with
+  # `terraform init -backend-config=...`. State must never be stored in Git.
+  backend "s3" {
+    encrypt = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -11,6 +17,11 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+}
+
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
 }
 
 variable "aws_region" {
@@ -30,6 +41,16 @@ variable "vpc_cidr" {
 
 variable "acm_certificate_arn" {
   type = string
+}
+
+variable "backend_origin_domain_name" {
+  description = "DNS name for the ALB origin; it must be covered by acm_certificate_arn"
+  type        = string
+}
+
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone containing backend_origin_domain_name"
+  type        = string
 }
 
 variable "cloudfront_certificate_arn" {
@@ -57,6 +78,17 @@ variable "db_password" {
   sensitive = true
 }
 
+variable "cloudfront_origin_header_value" {
+  description = "Random value CloudFront sends to the ALB to authenticate origin requests"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.cloudfront_origin_header_value) >= 32
+    error_message = "cloudfront_origin_header_value must contain at least 32 characters."
+  }
+}
+
 variable "model_bucket_name" {
   type    = string
   default = "emotionlens-models"
@@ -69,6 +101,12 @@ variable "frontend_bucket_name" {
 
 data "aws_availability_zones" "available" {
   state = "available"
+}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_ec2_managed_prefix_list" "cloudfront_origin_facing" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
 locals {
@@ -99,7 +137,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, count.index)
   availability_zone       = local.azs[count.index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name = "${var.project_name}-public-${count.index + 1}"
@@ -136,30 +174,8 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_eip" "nat" {
-  domain = "vpc"
-
-  tags = {
-    Name = "${var.project_name}-nat-eip"
-  }
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name = "${var.project_name}-nat"
-  }
-}
-
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
 
   tags = {
     Name = "${var.project_name}-private-rt"
@@ -178,24 +194,19 @@ resource "aws_security_group" "alb" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTPS from CloudFront origin-facing addresses only"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront_origin_facing.id]
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "Application traffic to ECS tasks"
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
   }
 
   tags = {
@@ -209,6 +220,7 @@ resource "aws_security_group" "ecs" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    description     = "Application traffic from the ALB"
     from_port       = 8000
     to_port         = 8000
     protocol        = "tcp"
@@ -216,10 +228,43 @@ resource "aws_security_group" "ecs" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "TLS access to private AWS service endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description     = "TLS access to S3 through the gateway endpoint"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    prefix_list_ids = [aws_vpc_endpoint.s3.prefix_list_id]
+  }
+
+  egress {
+    description = "PostgreSQL access inside the VPC"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "DNS over UDP inside the VPC"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "DNS over TCP inside the VPC"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
   }
 
   tags = {
@@ -233,17 +278,11 @@ resource "aws_security_group" "rds" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
+    description     = "PostgreSQL from ECS tasks"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -251,8 +290,123 @@ resource "aws_security_group" "rds" {
   }
 }
 
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.project_name}-vpc-endpoints-sg"
+  description = "Private AWS API endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description     = "TLS from ECS tasks"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
+
+  tags = {
+    Name = "${var.project_name}-vpc-endpoints-sg"
+  }
+}
+
+locals {
+  interface_vpc_endpoints = toset([
+    "ecr.api",
+    "ecr.dkr",
+    "logs",
+    "secretsmanager",
+  ])
+}
+
+resource "aws_vpc_endpoint" "interface" {
+  for_each = local.interface_vpc_endpoints
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.${each.value}"
+  vpc_endpoint_type   = "Interface"
+  private_dns_enabled = true
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name = "${var.project_name}-${replace(each.value, ".", "-")}-endpoint"
+  }
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+
+  tags = {
+    Name = "${var.project_name}-s3-endpoint"
+  }
+}
+
 resource "aws_ecr_repository" "backend" {
-  name = "${var.project_name}-backend"
+  name                 = "${var.project_name}-backend"
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.main.arn
+  }
+}
+
+data "aws_iam_policy_document" "kms" {
+  statement {
+    sid       = "EnableAccountPermissions"
+    actions   = ["kms:*"]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid = "AllowCloudWatchLogs"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:Encrypt",
+      "kms:GenerateDataKey*",
+      "kms:ReEncrypt*",
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["logs.${var.aws_region}.amazonaws.com"]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+      values   = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
+    }
+  }
+}
+
+resource "aws_kms_key" "main" {
+  description             = "${var.project_name} application data encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.kms.json
+
+  tags = {
+    Name = "${var.project_name}-application"
+  }
+}
+
+resource "aws_kms_alias" "main" {
+  name          = "alias/${var.project_name}-application"
+  target_key_id = aws_kms_key.main.key_id
 }
 
 resource "aws_s3_bucket" "models" {
@@ -263,12 +417,182 @@ resource "aws_s3_bucket" "models" {
   }
 }
 
+# This is the terminal log sink; enabling access logging on it would recurse.
+#trivy:ignore:AWS-0089
+resource "aws_s3_bucket" "logs" {
+  bucket = "${var.project_name}-${data.aws_caller_identity.current.account_id}-${var.aws_region}-logs"
+
+  tags = {
+    Name = "${var.project_name}-logs"
+  }
+}
+
+resource "aws_s3_bucket_ownership_controls" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "logs" {
+  depends_on = [aws_s3_bucket_ownership_controls.logs]
+
+  bucket = aws_s3_bucket.logs.id
+  acl    = "log-delivery-write"
+}
+
+resource "aws_s3_bucket_versioning" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "logs" {
+  bucket                  = aws_s3_bucket.logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  rule {
+    id     = "expire-logs"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 90
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
+}
+
+data "aws_iam_policy_document" "logs_bucket" {
+  statement {
+    sid       = "VPCFlowLogAclCheck"
+    actions   = ["s3:GetBucketAcl"]
+    resources = [aws_s3_bucket.logs.arn]
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+
+  statement {
+    sid     = "VPCFlowLogWrite"
+    actions = ["s3:PutObject"]
+    resources = [
+      "${aws_s3_bucket.logs.arn}/vpc-flow-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+    ]
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
+  }
+
+  statement {
+    sid     = "DenyInsecureTransport"
+    effect  = "Deny"
+    actions = ["s3:*"]
+    resources = [
+      aws_s3_bucket.logs.arn,
+      "${aws_s3_bucket.logs.arn}/*",
+    ]
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "logs" {
+  bucket = aws_s3_bucket.logs.id
+  policy = data.aws_iam_policy_document.logs_bucket.json
+}
+
+resource "aws_flow_log" "rejected_traffic" {
+  vpc_id               = aws_vpc.main.id
+  traffic_type         = "REJECT"
+  log_destination_type = "s3"
+  log_destination      = "${aws_s3_bucket.logs.arn}/vpc-flow-logs"
+
+  depends_on = [aws_s3_bucket_policy.logs]
+}
+
 resource "aws_s3_bucket_versioning" "models" {
   bucket = aws_s3_bucket.models.id
 
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "models" {
+  bucket = aws_s3_bucket.models.id
+
+  rule {
+    bucket_key_enabled = true
+
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.main.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "models" {
+  bucket        = aws_s3_bucket.models.id
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access/models/"
+
+  depends_on = [aws_s3_bucket_acl.logs]
 }
 
 resource "aws_s3_bucket_public_access_block" "models" {
@@ -285,6 +609,35 @@ resource "aws_s3_bucket" "frontend" {
   tags = {
     Name = "${var.project_name}-frontend"
   }
+}
+
+resource "aws_s3_bucket_versioning" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
+  bucket = aws_s3_bucket.frontend.id
+
+  rule {
+    bucket_key_enabled = true
+
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.main.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "frontend" {
+  bucket        = aws_s3_bucket.frontend.id
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access/frontend/"
+
+  depends_on = [aws_s3_bucket_acl.logs]
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
@@ -315,6 +668,13 @@ resource "aws_cloudfront_distribution" "frontend" {
   default_root_object = "index.html"
   price_class         = "PriceClass_100"
   aliases             = var.frontend_domain_names
+  web_acl_id          = aws_wafv2_web_acl.frontend.arn
+
+  logging_config {
+    bucket          = aws_s3_bucket.logs.bucket_domain_name
+    include_cookies = false
+    prefix          = "cloudfront/"
+  }
 
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
@@ -323,18 +683,18 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   origin {
-    domain_name = aws_lb.backend.dns_name
+    domain_name = var.backend_origin_domain_name
     origin_id   = "backend-alb"
 
     custom_header {
       name  = "X-From-CloudFront"
-      value = "true"
+      value = var.cloudfront_origin_header_value
     }
 
     custom_origin_config {
       http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "http-only"
+      origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
@@ -407,6 +767,67 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 }
 
+resource "aws_wafv2_web_acl" "frontend" {
+  provider = aws.us_east_1
+
+  name  = "${var.project_name}-frontend"
+  scope = "CLOUDFRONT"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    name     = "aws-common-rules"
+    priority = 10
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-common-rules"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "rate-limit"
+    priority = 20
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        aggregate_key_type = "IP"
+        limit              = 1000
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${var.project_name}-rate-limit"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.project_name}-frontend"
+    sampled_requests_enabled   = true
+  }
+}
+
 data "aws_iam_policy_document" "frontend_bucket" {
   statement {
     actions   = ["s3:GetObject"]
@@ -440,20 +861,28 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier              = "${var.project_name}-db"
-  engine                  = "postgres"
-  engine_version          = "16"
-  instance_class          = "db.t3.micro"
-  allocated_storage       = 20
-  db_name                 = var.db_name
-  username                = var.db_username
-  password                = var.db_password
-  db_subnet_group_name    = aws_db_subnet_group.main.name
-  vpc_security_group_ids  = [aws_security_group.rds.id]
-  publicly_accessible     = false
-  multi_az                = false
-  skip_final_snapshot     = true
-  backup_retention_period = 0
+  identifier                          = "${var.project_name}-db"
+  engine                              = "postgres"
+  engine_version                      = "16"
+  instance_class                      = "db.t3.micro"
+  allocated_storage                   = 20
+  db_name                             = var.db_name
+  username                            = var.db_username
+  password                            = var.db_password
+  db_subnet_group_name                = aws_db_subnet_group.main.name
+  vpc_security_group_ids              = [aws_security_group.rds.id]
+  publicly_accessible                 = false
+  multi_az                            = false
+  storage_encrypted                   = true
+  kms_key_id                          = aws_kms_key.main.arn
+  backup_retention_period             = 7
+  deletion_protection                 = true
+  skip_final_snapshot                 = false
+  final_snapshot_identifier           = "${var.project_name}-db-final"
+  auto_minor_version_upgrade          = true
+  iam_database_authentication_enabled = true
+  performance_insights_enabled        = true
+  performance_insights_kms_key_id     = aws_kms_key.main.arn
 
   tags = {
     Name = "${var.project_name}-db"
@@ -462,11 +891,17 @@ resource "aws_db_instance" "main" {
 
 resource "aws_ecs_cluster" "main" {
   name = "${var.project_name}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "backend" {
   name              = "/ecs/${var.project_name}-backend"
   retention_in_days = 30
+  kms_key_id        = aws_kms_key.main.arn
 }
 
 resource "aws_iam_role" "ecs_task_execution" {
@@ -604,14 +1039,31 @@ resource "aws_ecs_task_definition" "backend" {
   ])
 }
 
+# CloudFront custom origins require a publicly addressable ALB. Access is limited
+# to the AWS-managed CloudFront origin prefix list and a secret origin header.
+#trivy:ignore:AWS-0053
 resource "aws_lb" "backend" {
-  name               = "${var.project_name}-alb"
-  load_balancer_type = "application"
-  subnets            = aws_subnet.public[*].id
-  security_groups    = [aws_security_group.alb.id]
+  name                       = "${var.project_name}-alb"
+  load_balancer_type         = "application"
+  subnets                    = aws_subnet.public[*].id
+  security_groups            = [aws_security_group.alb.id]
+  drop_invalid_header_fields = true
+  enable_deletion_protection = true
 
   tags = {
     Name = "${var.project_name}-alb"
+  }
+}
+
+resource "aws_route53_record" "backend_origin" {
+  zone_id = var.route53_zone_id
+  name    = var.backend_origin_domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.backend.dns_name
+    zone_id                = aws_lb.backend.zone_id
+    evaluate_target_health = true
   }
 }
 
@@ -632,23 +1084,26 @@ resource "aws_lb_target_group" "backend" {
   }
 }
 
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.backend.arn
-  port              = 80
-  protocol          = "HTTP"
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.acm_certificate_arn
 
   default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Forbidden"
+      status_code  = "403"
     }
   }
 }
 
-resource "aws_lb_listener_rule" "cloudfront_api_http" {
-  listener_arn = aws_lb_listener.http.arn
+resource "aws_lb_listener_rule" "cloudfront_api_https" {
+  listener_arn = aws_lb_listener.https.arn
   priority     = 1
 
   action {
@@ -659,21 +1114,8 @@ resource "aws_lb_listener_rule" "cloudfront_api_http" {
   condition {
     http_header {
       http_header_name = "X-From-CloudFront"
-      values           = ["true"]
+      values           = [var.cloudfront_origin_header_value]
     }
-  }
-}
-
-resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.backend.arn
-  port              = 443
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = var.acm_certificate_arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.backend.arn
   }
 }
 
