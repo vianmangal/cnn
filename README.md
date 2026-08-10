@@ -1,87 +1,221 @@
-# cnn
-
-CNN-based emotion recognition.
-
-Detected emotions: angry, fear, happy, neutral, sad.
-
-2 ways: Image or Webcam.
-
-# Setup
-
-1) Create a virtual environment:
-	 python -m venv .venv
-
-2) Activate it:
-	 source .venv/bin/activate
-
-3) Install dependencies:
-	 pip install tensorflow==2.21.0 opencv-python==4.13.0.92 matplotlib==3.10.9 pandas==3.0.3 numpy==2.4.4 scikit-learn==1.8.0
-
-# Run
-
-Train the model:
-	.venv/bin/python src/train.py
-
-Evaluate the latest model:
-	.venv/bin/python src/evaluate.py
-
-Predict a single image (relative path):
-	.venv/bin/python src/predict.py --image-path data/custom/my_face.jpg
-
-
-Run real-time webcam detection (press q to quit):
-	.venv/bin/python src/webcam.py
-
-# versions
-
-1) tensorflow==2.21.0
-2) opencv-python==4.13.0.92 - to read image into memory
-3) matplotlib==3.10.9
-4) pandas==3.0.3
-5) numpy==2.4.4
-6) scikit-learn==1.8.0
-
-# Datasets
-1) https://www.kaggle.com/datasets/nelgiriyewithana/emotions
-2) https://www.kaggle.com/datasets/msambare/fer2013
-3) any custom image and webcam.
-
----
+<div align="center">
 
 # EmotionLens
 
-EmotionLens is a compact emotion-detection app with:
+**A full-stack facial-expression classifier for uploaded images and webcam captures.**
 
-- `backend/` for the FastAPI inference API
-- `deep_fe/frontend/` for the React + Vite UI
-- `infra/` for AWS deployment
-- `src/` for optional local model training and evaluation scripts
+Built with TensorFlow, FastAPI, React, PostgreSQL, and AWS infrastructure as code.
 
-## Local setup
+</div>
 
-1. Create a virtual environment:
-   `python -m venv .venv`
-2. Activate it:
-   `source .venv/bin/activate`
-3. Install backend dependencies:
-   `pip install -r backend/requirements.txt`
-4. Install frontend dependencies:
-   `cd deep_fe/frontend && npm ci`
+EmotionLens detects the largest visible face, converts it to the model's `48 × 48` grayscale input, and predicts one of five expression classes: **angry**, **fear**, **happy**, **neutral**, or **sad**. The application supports file uploads and webcam captures, returns confidence scores for every class, and stores prediction records in PostgreSQL.
 
-## Local development
+> [!IMPORTANT]
+> Facial-expression classification is probabilistic and can be affected by lighting, pose, image quality, demographic bias, and the training data. EmotionLens is an educational project—not a medical, psychological, safety, employment, or identity-assessment tool.
 
-- Backend:
-  `uvicorn backend.main:app --reload`
-- Frontend:
-  `cd deep_fe/frontend && npm run dev`
+## Features
 
-## Optional model tooling
+- Upload JPG, PNG, JPEG, or WebP images through a responsive drag-and-drop interface.
+- Capture a frame directly from the browser using the webcam.
+- Detect and crop the largest face before inference, with a full-frame fallback.
+- Return the predicted class, confidence, all class scores, face-detection status, and model version.
+- Persist prediction metadata through an asynchronous FastAPI and PostgreSQL data layer.
+- Train, evaluate, inspect misclassifications, predict individual files, or run local webcam inference from Python scripts.
+- Provision a production AWS stack with Terraform and deploy through GitHub Actions.
 
-- Train:
-  `.venv/bin/python src/train.py`
-- Evaluate:
-  `.venv/bin/python src/evaluate.py`
-- Predict a single image:
-  `.venv/bin/python src/predict.py --image-path data/custom/my_face.jpg`
-- Run webcam inference:
-  `.venv/bin/python src/webcam.py`
+## Model snapshot
+
+The latest checked-in evaluation report covers 6,236 samples:
+
+| Metric | Score |
+| --- | ---: |
+| Accuracy | 61.45% |
+| Macro F1 | 59.03% |
+| Weighted F1 | 61.76% |
+| Best-performing class | Happy — 84.65% F1 |
+
+![Latest EmotionLens confusion matrix](models/emotion_cnn_20260530_193721_best_confusion_matrix.png)
+
+These numbers describe one stored evaluation run and should not be interpreted as general real-world reliability.
+
+## Architecture
+
+```text
+React + Vite UI
+      |
+      | image upload / webcam frame
+      v
+FastAPI /predict
+      |
+      +--> OpenCV face detection and 48x48 preprocessing
+      +--> TensorFlow CNN inference
+      +--> PostgreSQL prediction record
+      |
+      v
+Prediction, confidence, class scores, and model metadata
+```
+
+Production infrastructure is defined in Terraform and uses CloudFront, S3, WAF, an HTTPS Application Load Balancer, ECS Fargate, ECR, RDS PostgreSQL, Secrets Manager, KMS, private networking, and GitHub Actions with AWS OIDC.
+
+## Tech stack
+
+| Area | Technology |
+| --- | --- |
+| Model | TensorFlow / Keras CNN |
+| Image processing | OpenCV, NumPy |
+| API | FastAPI, Gunicorn, Uvicorn |
+| Persistence | PostgreSQL, SQLAlchemy async, Alembic |
+| Frontend | React, Vite, Tailwind CSS, React Webcam |
+| Local infrastructure | Docker Compose |
+| Cloud infrastructure | AWS, Terraform, GitHub Actions |
+
+## Run the application locally
+
+### Prerequisites
+
+- Python 3.11 recommended
+- Node.js 18 or newer
+- npm
+- Docker with Docker Compose
+
+### 1. Clone and install the backend
+
+```bash
+git clone https://github.com/vianmangal/emotion-lens.git
+cd emotion-lens
+
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+On Windows, activate the environment with `.venv\Scripts\activate`.
+
+### 2. Start PostgreSQL
+
+```bash
+docker compose up -d db
+```
+
+### 3. Configure the API
+
+Create a root `.env` file:
+
+```dotenv
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/emotiondb
+MODEL_PATH=models/emotion_cnn_20260530_193721_best.keras
+CORS_ALLOW_ORIGINS=["http://localhost:5173"]
+```
+
+Apply the database migration and start FastAPI:
+
+```bash
+alembic upgrade head
+uvicorn backend.main:app --reload
+```
+
+The health endpoint is available at `http://localhost:8000/health`.
+
+### 4. Start the frontend
+
+In a second terminal:
+
+```bash
+cd deep_fe/frontend
+npm ci
+```
+
+Create `deep_fe/frontend/.env.local`:
+
+```dotenv
+VITE_API_URL=http://localhost:8000
+```
+
+Then run:
+
+```bash
+npm run dev
+```
+
+Open the URL printed by Vite and choose image upload or webcam capture.
+
+## API
+
+### `POST /predict`
+
+Send an image as multipart form data under the `image` field:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -F "image=@path/to/face.jpg"
+```
+
+Example response shape:
+
+```json
+{
+  "emotion": "happy",
+  "confidence": 0.91,
+  "all_scores": {
+    "angry": 0.01,
+    "fear": 0.02,
+    "happy": 0.91,
+    "neutral": 0.04,
+    "sad": 0.02
+  },
+  "face_detected": true,
+  "model_version": "emotion_cnn_20260530_193721_best.keras"
+}
+```
+
+### `GET /health`
+
+Returns the API status and whether the model loaded successfully.
+
+## Model tooling
+
+The standalone scripts under `src/` support the model-development workflow. Install the additional training and analysis packages when needed:
+
+```bash
+pip install tensorflow opencv-python matplotlib pandas numpy scikit-learn
+```
+
+```bash
+# Train
+python src/train.py
+
+# Evaluate the latest model
+python src/evaluate.py
+
+# Predict one image
+python src/predict.py --image-path path/to/face.jpg
+
+# Run real-time local webcam inference; press q to quit
+python src/webcam.py
+```
+
+The repository references the [Emotions dataset](https://www.kaggle.com/datasets/nelgiriyewithana/emotions) and [FER-2013](https://www.kaggle.com/datasets/msambare/fer2013) for experimentation.
+
+## Repository structure
+
+```text
+emotion-lens/
+├── backend/              # FastAPI application, inference, persistence, and container
+├── deep_fe/frontend/     # React application
+├── infra/                # Terraform AWS infrastructure
+├── migrations/           # Alembic database migrations
+├── models/               # Model artifacts and evaluation reports
+├── src/                  # Training, evaluation, prediction, and webcam scripts
+├── docker-compose.yml    # Local PostgreSQL
+└── DEPLOY.md             # Production deployment and migration guide
+```
+
+## Deployment
+
+See [`DEPLOY.md`](DEPLOY.md) for the AWS prerequisites, encrypted Terraform state setup, model upload, database migration, GitHub Actions secrets, and production rollout steps.
+
+Review every Terraform plan before applying it. Existing RDS and ECR resources require controlled migrations when changing encryption settings.
+
+## Privacy
+
+The API stores the image filename, prediction, confidence, and class scores. Review the schema and retention requirements before deploying publicly, and do not retain or process facial images without appropriate user notice and consent.
