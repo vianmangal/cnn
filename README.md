@@ -34,7 +34,6 @@ The latest checked-in evaluation report covers 6,236 samples:
 | Weighted F1 | 61.76% |
 | Best-performing class | Happy — 84.65% F1 |
 
-![Latest EmotionLens confusion matrix](models/emotion_cnn_20260530_193721_best_confusion_matrix.png)
 
 These numbers describe one stored evaluation run and should not be interpreted as general real-world reliability.
 
